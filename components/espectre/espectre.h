@@ -30,6 +30,7 @@
 #include "config_manager.h"
 #include "calibration_manager.h"
 #include "traffic_generator_manager.h"
+#include "serial_streamer.h"
 
 namespace esphome {
 namespace espectre {
@@ -107,6 +108,7 @@ class ESpectreComponent : public Component {
   ConfigurationManager config_manager_;
   CalibrationManager calibration_manager_;
   TrafficGeneratorManager traffic_generator_;
+  SerialStreamer serial_streamer_;
   
   // Number controls
   number::Number *threshold_number_{nullptr};

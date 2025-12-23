@@ -55,6 +55,7 @@ void ESpectreComponent::setup() {
   // 4. Initialize managers (each manager handles its own internal initialization)
   this->calibration_manager_.init(&this->csi_manager_);
   this->traffic_generator_.init(this->traffic_generator_rate_);
+  this->serial_streamer_.init();
   this->csi_manager_.init(
     &this->csi_processor_,
     this->selected_subcarriers_,
@@ -107,6 +108,15 @@ void ESpectreComponent::on_wifi_connected_() {
         this->sensor_publisher_.publish_all(&this->csi_processor_, state);
       }
     ));
+    
+    // Set up game mode callback (called every CSI packet when active)
+    this->csi_manager_.set_game_mode_callback(
+      [this](float movement, float threshold) {
+        if (this->serial_streamer_.is_active()) {
+          this->serial_streamer_.send_data(movement, threshold);
+        }
+      }
+    );
   }
   
   // Start traffic generator
@@ -195,7 +205,8 @@ void ESpectreComponent::on_wifi_disconnected_() {
 }
 
 void ESpectreComponent::loop() {
-  // Currently empty - CSI processing happens in callback
+  // Check for game mode Serial commands
+  this->serial_streamer_.check_commands();
 }
 
 void ESpectreComponent::set_threshold_runtime(float threshold) {

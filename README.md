@@ -444,3 +444,8 @@ See [LICENSE](LICENSE) for the full license text.
 **Francesco Pace**  
 Email: [francesco.pace@espectre.dev](mailto:francesco.pace@espectre.dev)  
 LinkedIn: [linkedin.com/in/francescopace](https://www.linkedin.com/in/francescopace/)
+
+If you find ESPectre useful and want to support its development, you can buy me a coffee. It's completely optional.
+I work on this project because I'm passionate about it. Contributions help me buy new hardware to expand the list of tested and supported devices, and dedicate more time to new features.
+
+<a href="https://www.buymeacoffee.com/espectre" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height: 60px !important;width: 217px !important;" ></a>
