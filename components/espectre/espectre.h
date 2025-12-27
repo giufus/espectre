@@ -77,11 +77,17 @@ class ESpectreComponent : public Component {
   // Runtime threshold adjustment (called from HA via number component)
   void set_threshold_runtime(float threshold);
   float get_threshold() const { return this->segmentation_threshold_; }
+
+  // Setter for calibration delay (in seconds from YAML)
+  void set_calibration_delay(uint32_t seconds) { this->calibration_delay_ = seconds * 1000; }
   
  protected:
   // WiFi lifecycle callbacks
   void on_wifi_connected_();
   void on_wifi_disconnected_();
+
+  // Helper to start the CSI/Traffic logic
+  void start_operations_();
   
   // Send system info over serial (for game display)
   void send_system_info_();
@@ -122,6 +128,8 @@ class ESpectreComponent : public Component {
   // State flags
   bool ready_to_publish_{false};      // True when CSI is ready and calibration done
   bool threshold_republished_{false}; // True after threshold has been re-published to HA
+
+  uint32_t calibration_delay_{0}; // Delay in milliseconds before starting calibration
 };
 
 }  // namespace espectre

@@ -31,6 +31,7 @@ CONF_SEGMENTATION_THRESHOLD = "segmentation_threshold"
 CONF_SEGMENTATION_WINDOW_SIZE = "segmentation_window_size"
 CONF_TRAFFIC_GENERATOR_RATE = "traffic_generator_rate"
 CONF_SELECTED_SUBCARRIERS = "selected_subcarriers"
+CONF_CALIBRATION_DELAY = "calibration_delay"
 
 # Low-pass filter
 CONF_LOWPASS_ENABLED = "lowpass_enabled"
@@ -67,6 +68,9 @@ CONFIG_SCHEMA = cv.Schema({
         cv.ensure_list(cv.int_range(min=0, max=63)),
         cv.Length(min=1, max=12)
     ),
+
+    # Calibration delay (seconds); delays the start of calibration after WiFi connection
+    cv.Optional(CONF_CALIBRATION_DELAY, default=0): cv.int_range(min=0, max=60),
     
     # Low-pass filter for noise reduction (disabled by default)
     cv.Optional(CONF_LOWPASS_ENABLED, default=False): cv.boolean,
@@ -123,6 +127,9 @@ async def to_code(config):
     cg.add(var.set_segmentation_threshold(config[CONF_SEGMENTATION_THRESHOLD]))
     cg.add(var.set_segmentation_window_size(config[CONF_SEGMENTATION_WINDOW_SIZE]))
     cg.add(var.set_traffic_generator_rate(config[CONF_TRAFFIC_GENERATOR_RATE]))
+
+    # Set calibration delay
+    cg.add(var.set_calibration_delay(config[CONF_CALIBRATION_DELAY]))
     
     # Configure subcarriers if specified
     if CONF_SELECTED_SUBCARRIERS in config:

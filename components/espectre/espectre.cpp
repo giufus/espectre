@@ -91,7 +91,22 @@ ESpectreComponent::~ESpectreComponent() {
 }
 
 void ESpectreComponent::on_wifi_connected_() {
-  
+  // If a delay is configured, wait before starting operations
+  if (this->calibration_delay_ > 0) {
+    ESP_LOGI(TAG, "WiFi Connected. Waiting %u seconds before starting calibration...", this->calibration_delay_ / 1000);
+    
+    // Schedule the start_operations_ function
+    this->set_timeout("calib_delay", this->calibration_delay_, [this]() {
+       ESP_LOGI(TAG, "Calibration delay finished. Starting operations.");
+       this->start_operations_();
+    });
+  } else {
+    // No delay, start immediately
+    this->start_operations_();
+  }
+}
+
+void ESpectreComponent::start_operations_() {
   // Enable CSI using CSI Manager with periodic callback
   if (!this->csi_manager_.is_enabled()) {
     ESP_ERROR_CHECK(this->csi_manager_.enable(
@@ -100,8 +115,7 @@ void ESpectreComponent::on_wifi_connected_() {
         // Don't publish until ready
         if (!this->ready_to_publish_) return;
         
-        // Re-publish threshold on first sensor update (HA is now connected)
-        // This fixes "unknown" state after power loss
+        // Re-publish threshold on first sensor update
         if (!this->threshold_republished_ && this->threshold_number_ != nullptr) {
           auto *threshold_num = static_cast<ESpectreThresholdNumber *>(this->threshold_number_);
           threshold_num->republish_state();
@@ -138,11 +152,7 @@ void ESpectreComponent::on_wifi_connected_() {
     ESP_LOGI(TAG, "Traffic generator already running");
   }
   
-  // Two-phase calibration:
-  // 1. Gain Lock (~3 seconds, 300 packets) - locks AGC/FFT for stable CSI
-  // 2. Baseline Calibration (~7 seconds, 700 packets) - calculates normalization scale
-  //    - If user specified subcarriers: only calculates baseline variance
-  //    - If auto (NBVI): also selects optimal subcarriers
+  // Two-phase calibration logic...
   if (this->traffic_generator_.is_running()) {
     // Set callback to start baseline calibration AFTER gain is locked
     this->csi_manager_.set_gain_lock_callback([this]() {
@@ -170,17 +180,17 @@ void ESpectreComponent::on_wifi_connected_() {
               memcpy(this->selected_subcarriers_, band, size);
               this->csi_manager_.update_subcarrier_selection(band);
             }
-            // Apply normalization scale to compensate for different ESP32 CSI amplitude ranges
+            // Apply normalization scale
             this->normalization_scale_ = normalization_scale;
             csi_processor_set_normalization_scale(&this->csi_processor_, normalization_scale);
             
             // Store baseline variance for status reporting
             this->baseline_variance_ = this->calibration_manager_.get_baseline_variance();
             
-            // Clear buffer to avoid stale calibration data causing high initial values
+            // Clear buffer to avoid stale calibration data
             csi_processor_clear_buffer(&this->csi_processor_);
             
-            // Reset rate counter to avoid incorrect rate on first log after calibration
+            // Reset rate counter
             this->sensor_publisher_.reset_rate_counter();
           }
 
@@ -194,21 +204,24 @@ void ESpectreComponent::on_wifi_connected_() {
   // Ready to publish sensors
   if (this->traffic_generator_.is_running()) {
     this->ready_to_publish_ = true;
-    this->threshold_republished_ = false;  // Will republish on first sensor update
+    this->threshold_republished_ = false;
   }
 }
 
 void ESpectreComponent::on_wifi_disconnected_() {
-  // Disable CSI using CSI Manager
-  this->csi_manager_.disable();
-  
-  // Stop traffic generator
-  if (this->traffic_generator_.is_running()) {
-    this->traffic_generator_.stop();
-  }
-  
-  // Reset flags
-  this->ready_to_publish_ = false;
+    // Cancel any pending calibration delay if wifi drops during wait
+    this->cancel_timeout("calib_delay");
+
+    // Disable CSI using CSI Manager
+    this->csi_manager_.disable();
+    
+    // Stop traffic generator
+    if (this->traffic_generator_.is_running()) {
+      this->traffic_generator_.stop();
+    }
+    
+    // Reset flags
+    this->ready_to_publish_ = false;
 }
 
 void ESpectreComponent::loop() {
@@ -274,8 +287,9 @@ void ESpectreComponent::dump_config() {
   ESP_LOGCONFIG(TAG, "");
   ESP_LOGCONFIG(TAG, " MOTION DETECTION");
   ESP_LOGCONFIG(TAG, " ├─ Threshold .......... %.2f", this->segmentation_threshold_);
-  ESP_LOGCONFIG(TAG, " └─ Window ............. %d pkts", this->segmentation_window_size_);
-  ESP_LOGCONFIG(TAG, " └─ Norm. Scale ........ %.4f (attenuate if >0.25)", this->normalization_scale_);
+  ESP_LOGCONFIG(TAG, " ├─ Window ............. %d pkts", this->segmentation_window_size_);
+  ESP_LOGCONFIG(TAG, " ├─ Norm. Scale ........ %.4f (attenuate if >0.25)", this->normalization_scale_);
+  ESP_LOGCONFIG(TAG, " └─ Calib. Delay ....... %u s", this->calibration_delay_ / 1000); // Log delay
   ESP_LOGCONFIG(TAG, "");
   ESP_LOGCONFIG(TAG, " SUBCARRIERS [%02d,%02d,%02d,%02d,%02d,%02d,%02d,%02d,%02d,%02d,%02d,%02d]",
                 this->selected_subcarriers_[0], this->selected_subcarriers_[1],

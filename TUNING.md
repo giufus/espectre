@@ -2,6 +2,19 @@
 
 Quick guide to tune ESPectre for reliable movement detection in your environment.
 
+
+### Configuration Parameters
+
+ESPectre component configuration:
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `traffic_generator_rate` | int | 100 | Packets/sec for CSI generation (0=disabled) |
+| `segmentation_threshold` | float | 1.0 | Motion sensitivity (lower=more sensitive) |
+| `segmentation_window_size` | int | 50 | Moving variance window in packets |
+| `calibration_delay` | int | 0 | **New**: Delay in seconds (0-60) before starting calibration after WiFi connection. Useful to leave the room. |
+| `selected_subcarriers` | list | auto | Fixed subcarriers (omit for auto-calibration) |
+
 ---
 
 ## Quick Start (5 minutes)
@@ -439,7 +452,7 @@ Use **History** graphs to visualize detection patterns over time.
 3. **Document your settings:** Note what works for your environment
 4. **Seasonal adjustments:** Retune when furniture changes or new interference sources appear
 5. **Distance matters:** Keep sensor 3-8m from router for optimal performance
-6. **Quiet calibration:** Ensure no movement during first 5-10 seconds after boot
+6. **Quiet calibration:** Ensure no movement during first 5-10 seconds after boot or configure a `calibration delay` (see [Configuration Parameters](TUNING.md#configuration-parameters))
 7. **Try the game:** Use [ESPectre - The Game](https://espectre.dev/game) for interactive threshold tuning with real-time visual feedback
 
 ---
